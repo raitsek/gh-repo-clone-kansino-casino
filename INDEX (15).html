@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Casino Admin Panel</title>
+<link rel="stylesheet" href="{{ asset('css/style.css') }}">
+</head>
+<body>
+<nav>
+<a href="{{ route('admin.dashboard') }}">Dashboard</a> |
+<a href="{{ route('admin.users') }}">Users</a> |
+<a href="{{ route('admin.transactions') }}">Transactions</a> |
+<a href="{{ route('admin.games') }}">Games</a>
+</nav>
+<hr>
+<div class="content">
+@yield('content')
+</div>
+</body>
+</html>
+```
+
+
+---
+
+
+## 4️⃣ Admin Dashboard (`resources/views/admin/dashboard.blade.php`)
+```blade
+@extends('admin.layout')
+@section('content')
+<h1>Dashboard</h1>
+<p>Total Users: {{ $totalUsers }}</p>
+<p>Total Bets: {{ $totalBets }}</p>
+<p>Total Payouts: {{ $totalPayouts }}</p>
+@endsection
+```
+This gives you a **fully functional admin panel** for managing users, transactions, and game parameters securely. You can now also integrate the external platforms (Only iGaming, SoftGamings, GamingTec, SoftSwiss) into this admin panel for game control and analytics.
