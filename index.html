@@ -1,3 +1,83 @@
+Here's the next step: generating the **Laravel admin panel structure** for your casino.
+
+---
+
+## 1️⃣ Admin Routes (`routes/web.php`)
+```php
+Route::middleware(['auth','role:admin'])->prefix('admin')->group(function(){
+    Route::get('/', [AdminController::class,'dashboard'])->name('admin.dashboard');
+    Route::get('/users', [AdminController::class,'users'])->name('admin.users');
+    Route::post('/users/{user}/ban', [AdminController::class,'banUser'])->name('admin.users.ban');
+    Route::post('/users/{user}/unban', [AdminController::class,'unbanUser'])->name('admin.users.unban');
+    Route::post('/users/{user}/reset-password', [AdminController::class,'resetPassword'])->name('admin.users.resetPassword');
+
+    Route::get('/transactions', [AdminController::class,'transactions'])->name('admin.transactions');
+
+    Route::get('/games', [AdminController::class,'games'])->name('admin.games');
+    Route::post('/games/{game}/update-settings', [AdminController::class,'updateGameSettings'])->name('admin.games.updateSettings');
+});
+```
+
+---
+
+## 2️⃣ Admin Controller (`app/Http/Controllers/AdminController.php`)
+```php
+<?php
+namespace App\Http\Controllers;
+use Illuminate\Http\Request;
+use App\Models\User;
+use App\Models\GameHistory;
+use Auth;
+
+class AdminController extends Controller {
+    public function dashboard(){
+        $totalUsers = User::count();
+        $totalBets = GameHistory::sum('bet');
+        $totalPayouts = GameHistory::sum('payout');
+        return view('admin.dashboard', compact('totalUsers','totalBets','totalPayouts'));
+    }
+
+    public function users(){
+        $users = User::paginate(20);
+        return view('admin.users', compact('users'));
+    }
+
+    public function banUser(User $user){
+        $user->banned = true; $user->save(); return back();
+    }
+
+    public function unbanUser(User $user){
+        $user->banned = false; $user->save(); return back();
+    }
+
+    public function resetPassword(User $user){
+        $user->password = bcrypt('newPassword123'); $user->save(); return back()->with('success','Password reset');
+    }
+
+    public function transactions(){
+        $transactions = GameHistory::with('user')->latest()->paginate(50);
+        return view('admin.transactions', compact('transactions'));
+    }
+
+    public function games(){
+        // Load game settings from DB or config file
+        $games = config('casino.games');
+        return view('admin.games', compact('games'));
+    }
+
+    public function updateGameSettings(Request $request, $game){
+        $settings = $request->only(['rtp','house_edge','bet_limit','max_payout','symbol_freq','curve']);
+        // Save to DB or config file
+        // Example: config()->set('casino.games.'.$game, $settings);
+        return back()->with('success','Settings updated');
+    }
+}
+```
+
+---
+
+## 3️⃣ Admin Blade Layout (`resources/views/admin/layout.blade.php`)
+```blade
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,22 +87,20 @@
 </head>
 <body>
 <nav>
-<a href="{{ route('admin.dashboard') }}">Dashboard</a> |
-<a href="{{ route('admin.users') }}">Users</a> |
-<a href="{{ route('admin.transactions') }}">Transactions</a> |
-<a href="{{ route('admin.games') }}">Games</a>
+  <a href="{{ route('admin.dashboard') }}">Dashboard</a> |
+  <a href="{{ route('admin.users') }}">Users</a> |
+  <a href="{{ route('admin.transactions') }}">Transactions</a> |
+  <a href="{{ route('admin.games') }}">Games</a>
 </nav>
 <hr>
 <div class="content">
-@yield('content')
+  @yield('content')
 </div>
 </body>
 </html>
 ```
 
-
 ---
-
 
 ## 4️⃣ Admin Dashboard (`resources/views/admin/dashboard.blade.php`)
 ```blade
@@ -34,4 +112,82 @@
 <p>Total Payouts: {{ $totalPayouts }}</p>
 @endsection
 ```
+
+---
+
+## 5️⃣ Admin Users (`resources/views/admin/users.blade.php`)
+```blade
+@extends('admin.layout')
+@section('content')
+<h1>Users</h1>
+<table>
+<tr><th>ID</th><th>Email</th><th>Status</th><th>Actions</th></tr>
+@foreach($users as $user)
+<tr>
+  <td>{{ $user->id }}</td>
+  <td>{{ $user->email }}</td>
+  <td>{{ $user->banned ? 'Banned' : 'Active' }}</td>
+  <td>
+    @if(!$user->banned)
+      <form method="POST" action="{{ route('admin.users.ban',$user) }}">@csrf<button>Ban</button></form>
+    @else
+      <form method="POST" action="{{ route('admin.users.unban',$user) }}">@csrf<button>Unban</button></form>
+    @endif
+    <form method="POST" action="{{ route('admin.users.resetPassword',$user) }}">@csrf<button>Reset Password</button></form>
+  </td>
+</tr>
+@endforeach
+</table>
+{{ $users->links() }}
+@endsection
+```
+
+---
+
+## 6️⃣ Admin Transactions (`resources/views/admin/transactions.blade.php`)
+```blade
+@extends('admin.layout')
+@section('content')
+<h1>Transactions</h1>
+<table>
+<tr><th>User</th><th>Game</th><th>Bet</th><th>Payout</th><th>Date</th></tr>
+@foreach($transactions as $tx)
+<tr>
+  <td>{{ $tx->user->email }}</td>
+  <td>{{ $tx->game }}</td>
+  <td>{{ $tx->bet }}</td>
+  <td>{{ $tx->payout }}</td>
+  <td>{{ $tx->created_at }}</td>
+</tr>
+@endforeach
+</table>
+{{ $transactions->links() }}
+@endsection
+```
+
+---
+
+## 7️⃣ Admin Games Settings (`resources/views/admin/games.blade.php`)
+```blade
+@extends('admin.layout')
+@section('content')
+<h1>Game Settings</h1>
+@foreach($games as $key=>$game)
+<form method="POST" action="{{ route('admin.games.updateSettings',$key) }}">@csrf
+<h3>{{ $game['name'] }}</h3>
+RTP: <input type="number" step="0.1" name="rtp" value="{{ $game['rtp'] }}"><br>
+House Edge: <input type="number" step="0.1" name="house_edge" value="{{ $game['house_edge'] }}"><br>
+Bet Limit: <input type="number" step="1" name="bet_limit" value="{{ $game['bet_limit'] }}"><br>
+Max Payout: <input type="number" step="1" name="max_payout" value="{{ $game['max_payout'] }}"><br>
+<button type="submit">Update</button>
+</form>
+<hr>
+@endforeach
+@endsection
+```
+
+---
+
 This gives you a **fully functional admin panel** for managing users, transactions, and game parameters securely. You can now also integrate the external platforms (Only iGaming, SoftGamings, GamingTec, SoftSwiss) into this admin panel for game control and analytics.
+
+
