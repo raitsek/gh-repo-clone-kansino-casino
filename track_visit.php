@@ -1,0 +1,2 @@
+LiveAgent.instance.initTracker(new LiveAgent.TrackPushStream('5.57.3.8', 'e7b84b6069_vb_', 'u513419_eb08', 'https://1.ec1.vbus.apps.ladesk.com/5_57_3_8/','https://2.ec1.vbus.apps.ladesk.com/5_57_3_8/','https://3.ec1.vbus.apps.ladesk.com/5_57_3_8/','https://4.ec1.vbus.apps.ladesk.com/5_57_3_8/','https://5.ec1.vbus.apps.ladesk.com/5_57_3_8/','https://6.ec1.vbus.apps.ladesk.com/5_57_3_8/'));
+LiveAgent.setCookieOnTopDomain(LiveAgent.instance.getVisitorIdCookieName_(), LiveAgent.instance.browserId, 30);
